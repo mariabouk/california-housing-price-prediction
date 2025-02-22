@@ -32,7 +32,7 @@ pip install -r requirements.txt
 1. Ensure the trained model (`CaliforniaBestHousingModel.json`) and `preprocessor.pkl` are present in the appropriate directories.
 2. Start the FastAPI server:
 ```sh
-uvicorn main:app --host 0.0.0.0 --port 8000
+uvicorn main:app --reload
 ```
 3. Access the API documentation at `http://127.0.0.1:8000/docs`
 
