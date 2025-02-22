@@ -1,5 +1,5 @@
 from fastapi import FastAPI, HTTPException, Depends
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
 import xgboost as xgb
 import pandas as pd
 import joblib
@@ -64,7 +64,7 @@ class ModelHandler:
 
     def preprocess_input(self, data: dict):
         """
-        This method is responsible for converting the input to DataFrame, for  performing feature engineering features,
+        This method is responsible for converting the input to DataFrame, performing feature engineering features,
         and applying preprocessing to the initial features.
         """
         try:
@@ -92,21 +92,26 @@ app = FastAPI()
 
 # Define an endpoint for making house price predictions
 @app.post("/predict/")
-async def predict(data: InputData, handler: ModelHandler = Depends(lambda: model_handler)):
+async def predict(data: dict):
     """
     This method is responsible for receiving input data, processing it, and returning the predicted house value.
     """
     try:
-        # Preprocess the input features
-        input_features = handler.preprocess_input(data.dict())
+        # Validate manually using Pydantic (to catch invalid data early)
+        validated_data = InputData(**data)
+        input_features = model_handler.preprocess_input(validated_data.dict())
 
         # Calculate the prediction using the trained model
-        prediction = handler.model.predict(input_features)
+        prediction = model_handler.model.predict(input_features)
 
         # Return the predicted house value as a JSON response
         return {"predicted_house_value": float(prediction[0])}
 
     # Handling invalid inputs such as missing or incorrect data types
+    except ValidationError as ve:
+        logging.error(f"Validation error: {ve}")
+        raise HTTPException(status_code=400, detail="Invalid input data format.")
+
     except ValueError as ve:
         raise HTTPException(status_code=400, detail=str(ve))
 
